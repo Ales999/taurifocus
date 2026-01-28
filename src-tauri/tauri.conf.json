@@ -13,8 +13,12 @@
     "windows": [
       {
         "title": "taurifocus",
-        "width": 800,
-        "height": 600
+        "fullscreen": false,
+        "resizable": false,
+        "center": true,
+        "decorations": false,
+        "width": 600,
+        "height": 60
       }
     ],
     "security": {
