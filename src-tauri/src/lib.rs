@@ -4,18 +4,26 @@
 use std::fs::OpenOptions;
 use std::io::Write;
 
+use home::home_dir;
+
 //#[warn(unused_imports)]
 //use tauri::menu::Menu;
 
 #[tauri::command]
 fn add_task(text: String) {
-  let mut file = OpenOptions::new()
-    .create(true)
-    .append(true)
-    .open("../tasks.txt")
-    .expect("Ошибка при открытии файла");
+    // !
+    let mut path = home_dir()
+     .expect("Ошибка доступа к домашней директории");
 
-  writeln!(file, "{}", text).expect("Ошибка при записи файла");
+    // добавляем в путь название файла для заметок
+    path.push("tasks.txt");
+    let mut file = OpenOptions::new()
+     .create(true)
+     .append(true)
+     .open(path)
+     .expect("Ошибка при открытии файла");
+
+    writeln!(file, "{text}").expect("Ошибка при записи файла");
 }
 
 #[tauri::command]
