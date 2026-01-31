@@ -11,19 +11,35 @@ use home::home_dir;
 
 #[tauri::command]
 fn add_task(text: String) {
-    // !
+    // Определяем путь к файлу
     let mut path = home_dir()
-     .expect("Ошибка доступа к домашней директории");
-
-    // добавляем в путь название файла для заметок
+        .expect("Ошибка доступа к домашней директории");
     path.push("tasks.txt");
-    let mut file = OpenOptions::new()
-     .create(true)
-     .append(true)
-     .open(path)
-     .expect("Ошибка при открытии файла");
 
-    writeln!(file, "{text}").expect("Ошибка при записи файла");
+    // Читаем текущее содержимое (если файл не существует – пустая строка)
+    let old_content = std::fs::read_to_string(&path).unwrap_or_default();
+
+    // Получаем текущую дату/время в нужном формате
+    // формат: день-месяц-год часы:минуты
+    let timestamp = chrono::Local::now()
+        .format("%d-%m-%Y %H:%M")
+        .to_string();
+
+    let new_line = format!("{} {}", timestamp, text);
+
+    // Открываем файл для записи, обнуляя его
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)   // удаляем старое содержимое
+        .open(path)
+        .expect("Ошибка при открытии файла");
+
+    // Записываем новую строку, затем старое содержимое
+    writeln!(file, "{}", new_line)
+        .expect("Ошибка при записи нового задания");
+    file.write_all(old_content.as_bytes())
+        .expect("Ошибка при записи старого содержимого");
 }
 
 #[tauri::command]

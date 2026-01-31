@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 //import reactLogo from "./assets/react.svg";
 import { invoke } from "@tauri-apps/api/core";
-//import { invoke, process } from '@tauri-apps/api'
-
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import "./App.css";
 
 function App() {
+
   const [text, setText] = useState('')
 
   const addTask = async (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -27,9 +27,12 @@ function App() {
       return
     default:
       return
-  }
+    }
 
   }
+
+  // Похоже это не поможет!
+  getCurrentWindow().setFocus();
 
   return (
     <input
@@ -38,6 +41,7 @@ function App() {
       value={text}
       onChange={(e) => setText(e.target.value)}
       onKeyDown={addTask}
+      autoFocus
     />
   )
 }
