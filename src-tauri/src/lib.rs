@@ -1,4 +1,5 @@
 // src-tauri/src/lib.rs
+
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 
 // импорт зависимостей
@@ -9,7 +10,7 @@ use home::home_dir;
 
 #[tauri::command]
 fn show_app(app: AppHandle) {
-    println!("Вызвано `show_app`");
+    //println!("Вызвано `show_app`");
     let window = app.get_webview_window("main").unwrap();
     window.show().unwrap();
     window.set_focus().unwrap();
@@ -17,21 +18,21 @@ fn show_app(app: AppHandle) {
 
 #[tauri::command]
 fn hide_app(app: AppHandle) {
-    println!("Вызвано `hide_app`");
+    // println!("Вызвано `hide_app`");
     let window = app.get_webview_window("main").unwrap();
     window.hide().unwrap();
 }
 
 #[tauri::command]
 fn add_task(text: String) {
-    println!("Вызвано `add_task`");
+    //println!("Вызвано `add_task`");
 
     let mut path = home_dir().expect("Ошибка доступа к домашней директории");
     path.push("tasks.txt");
 
     let old_content = std::fs::read_to_string(&path).unwrap_or_default();
     let timestamp = chrono::Local::now().format("%d-%m-%Y %H:%M").to_string();
-    let new_line = format!("{} {}", timestamp, text);
+    let new_line = format!("{} | {}", timestamp, text.trim_ascii_end());
 
     let mut file = OpenOptions::new()
         .write(true)
