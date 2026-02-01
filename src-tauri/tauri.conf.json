@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "taurifocus",
+  "productName": "Tauri-Focus",
   "version": "1.0.2",
   "identifier": "com.alexey.mekhanoshin.taurifocus",
   "build": {
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "taurifocus",
+        "title": "Tauri Focus App",
         "fullscreen": false,
         "resizable": false,
         "center": true,
@@ -30,6 +30,15 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "windows": {
+      "wix": {
+        "language": ["en-US", "ru-RU"]
+      },
+      "nsis": {
+        "languages": [ "English", "Russian"],
+        "displayLanguageSelector": true
+      }
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
