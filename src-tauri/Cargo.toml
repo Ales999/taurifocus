@@ -1,7 +1,7 @@
 [package]
 name = "taurifocus"
-version = "1.0.1"
-description = "A Tauri App"
+version = "1.0.2"
+description = "Tauri Focus App"
 authors = ["Alexey Mekhanoshin <ales999@gmail.com>"]
 edition = "2024"
 
