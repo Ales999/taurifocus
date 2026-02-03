@@ -1,8 +1,8 @@
 [package]
 name = "taurifocus"
-version = "1.0.2"
+version = "1.0.3"
 description = "Tauri Focus App"
-authors = ["Alexey Mekhanoshin <ales999@gmail.com>"]
+authors = ["Mekhanoshin Alexey"]
 edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
