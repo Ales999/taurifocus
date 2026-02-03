@@ -61,13 +61,14 @@ function App() {
 
 
   // Данный эффект сработает когда приложение скрывается (hiden)
+  // ! Это вероятно не работает, - проверить дополнительно.
   // TODO: Можно сохранять во временное место, и вернуть обратно при открытии приложения, а не очищать
   useEffect(() => {
     (async () => {
-      const unlisten = await getCurrentWindow().listen('tauri://closeRequested', () => {
+      const unlistenCloseReq = await getCurrentWindow().listen('tauri://closeRequested', () => {
         setText('');
       });
-      return () => unlisten();
+      return () => unlistenCloseReq();
     })()
   }, []);
 
