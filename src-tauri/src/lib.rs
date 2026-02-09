@@ -4,11 +4,15 @@
 
 // импорт зависимостей
 use home::home_dir;
+use tauri::menu::PredefinedMenuItem;
 use tauri::{AppHandle, Manager};
 
 // Код работы с файлом
 mod add_task_as_create;
 mod add_task_as_modify;
+
+// Имя файла в домашнем каталоге, в который и будем записывать наши заметки.
+const TASK_FILE_NAME: &str = "tfocus_tasks.txt";
 
 #[tauri::command]
 fn show_app(app: AppHandle) {
@@ -53,7 +57,7 @@ fn add_task(text: String) -> Result<(), String> {
 
     // Добавляем к пути само имя файла
     let mut file_path = home_dir;
-    file_path.push("tasks.txt");
+    file_path.push(TASK_FILE_NAME);
 
     // Проверяем, существует ли файл
     if file_path.exists() {
@@ -133,24 +137,25 @@ pub fn run() {
                 )?;
 
                 // Menu items
-                let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
                 let toggle_i =
-                    MenuItem::with_id(app, "toggle", "Показать/Скрыть", true, None::<&str>)?;
-                let _menu = Menu::with_items(app, &[&toggle_i, &quit_i])?;
+                    MenuItem::with_id(app, "show_input", "Показать окно", true, None::<&str>)?;
+                let separator_i = PredefinedMenuItem::separator(app)?;
+                let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+                let _menu = Menu::with_items(app, &[&toggle_i, &separator_i, &quit_i])?;
 
                 let _ = TrayIconBuilder::new()
                     .icon(app.default_window_icon().unwrap().clone())
                     .menu(&_menu)
                     .show_menu_on_left_click(true)
                     .on_menu_event(|app, event| match event.id.as_ref() {
+                        "show_input" => {
+                            // Вызываем переключение видимости приложения
+                            let _ = show_app(app.app_handle().clone());
+                        }
                         "quit" => {
                             #[cfg(dev)]
                             println!("quit menu item was clicked");
                             app.exit(0);
-                        }
-                        "toggle" => {
-                            // Вызываем переключение видимости приложения
-                            let _ = toggle_app(app.app_handle().clone());
                         }
                         _ => {
                             #[cfg(dev)]
