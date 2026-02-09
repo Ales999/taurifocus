@@ -9,11 +9,20 @@ function App() {
   const addTask = async (e: React.KeyboardEvent<HTMLInputElement>) => {
     switch (e.key) {
       case 'Enter':
+        // setText('-----------------');
         // Если там не только пробел(ы), то добавляем задачу
         if (text.trim().length > 0) {
           try {
-            await invoke('add_task', { text });
-            setText('');
+            await invoke('add_task', { text })
+              .then(() => {
+                console.log('Задача добавлена')
+                // Раз всё успешно, очищаем ввод
+                setText('');
+              })
+              .catch((err) => {
+                setText('');
+                setText(err)
+              });
           } catch (e) {
             console.error(e);
           }
