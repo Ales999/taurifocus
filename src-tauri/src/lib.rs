@@ -126,10 +126,10 @@ pub fn run() {
                             //let _ = toggle_app(_app.clone());
                             if shortcut == &ctrl_shift_q_shortcut {
                                 match event.state() {
-                                    ShortcutState::Pressed => {}
-                                    ShortcutState::Released => {
-                                        let _ = toggle_app(_app.clone());
+                                    ShortcutState::Pressed => {
+                                        let _ = show_app(_app.clone());
                                     }
+                                    ShortcutState::Released => {}
                                 }
                             }
                         })
