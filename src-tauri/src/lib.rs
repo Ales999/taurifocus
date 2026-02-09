@@ -3,14 +3,12 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 
 // импорт зависимостей
-use std::fs::OpenOptions;
-use std::io::{Read, Seek, SeekFrom, Write};
-//use std::io::Read;
-//use std::io::Write;
-//use std::os::windows::fs::FileExt;
-
 use home::home_dir;
 use tauri::{AppHandle, Manager};
+
+// Код работы с файлом
+mod add_task_as_create;
+mod add_task_as_modify;
 
 #[tauri::command]
 fn show_app(app: AppHandle) {
@@ -37,8 +35,15 @@ fn add_task(text: String) -> Result<(), String> {
     if new_text.is_empty() {
         return Ok(()); // Возвращаем успешный результат, ничего не делая
     }
+
     #[cfg(dev)]
     println!("Строка не пустая - добаляем в задачу");
+
+    let formatted_text = format!(
+        "{} | {}",
+        chrono::Local::now().format("%d-%m-%Y %H:%M"),
+        new_text.to_string()
+    );
 
     // Получаем данные о домашней директории
     let home_dir = match home_dir() {
@@ -51,77 +56,23 @@ fn add_task(text: String) -> Result<(), String> {
     file_path.push("tasks.txt");
 
     // Проверяем, существует ли файл
-    if !file_path.exists() {
+    if file_path.exists() {
         #[cfg(dev)]
-        println!("Файл существует");
+        println!("Файл существует - модифицируем");
 
-        // Если файл не существует, создаем новый и записываем туда новую задачу
-        let file = OpenOptions::new().write(true).create(true).open(&file_path);
-
-        match file {
-            Ok(mut f) => {
-                writeln!(
-                    f,
-                    "{} | {}",
-                    chrono::Local::now().format("%d-%m-%Y %H:%M"),
-                    new_text.trim_end()
-                )
-                .map_err(|e| format!("Ошибка при записи нового задания: {}", e))?;
-                let _ = f.flush();
-            }
-            Err(e) => {
-                #[cfg(dev)]
-                println!("Ошибка при открытии файла: {}", e);
-                return Err(format!("Ошибка при открытии файла: {}", e));
-            }
+        if let Err(e) = add_task_as_modify::prepend_line(file_path, &formatted_text) {
+            #[cfg(dev)]
+            println!("Ошибка файла: {}", e);
+            return Err(format!("Ошибка операции с файлом: {}", e));
         }
     } else {
         #[cfg(dev)]
-        println!("Файл существует");
+        println!("Файл не существует - создаем ");
 
-        // Если файл существует, считываем все строки, записываем новую в начало и сохраняем старые
-        let file = OpenOptions::new().read(true).write(true).open(&file_path);
-
-        match file {
-            Ok(mut f) => {
-                let mut old_content = String::new();
-                if let Err(e) = f.read_to_string(&mut old_content) {
-                    #[cfg(dev)]
-                    println!("Ошибка при чтении файла: {}", e);
-                    return Err(format!("Ошибка при чтении файла: {}", e));
-                }
-
-                // Перемещаем курсор в начало файла
-                if let Err(e) = f.seek(SeekFrom::Start(0)) {
-                    #[cfg(dev)]
-                    println!("Ошибка позиционирования `seek` файла: {}", e);
-                    return Err(format!("Ошибка позиционирования файла: {}", e));
-                }
-
-                // Обрезаем файл до нулевой длины
-                // ! Важно: этот метод вероятно не работает на Windows
-                //file.set_len(0)?;
-                // Записываем новую задачу
-
-                writeln!(
-                    f,
-                    "{} | {}",
-                    chrono::Local::now().format("%d-%m-%Y %H:%M"),
-                    new_text.trim_end()
-                )
-                .map_err(|e| format!("Ошибка при записи нового задания: {}", e))?;
-
-                if let Err(e) = f.write_all(old_content.as_bytes()) {
-                    #[cfg(dev)]
-                    println!("Ошибка при записи старых заданий: {}", e);
-                    return Err(format!("Ошибка при записи старых заданий: {}", e));
-                }
-            }
-            Err(e) => {
-                #[cfg(dev)]
-                println!("Ошибка при открытии файла: {}", e);
-                return Err(format!("Ошибка при открытии файла: {}", e));
-            }
+        if let Err(e) = add_task_as_create::created_line(file_path, &formatted_text) {
+            #[cfg(dev)]
+            println!("Ошибка при создании файла: {}", e);
+            return Err(format!("Ошибка при создании/записи файла: {}", e));
         }
     }
 
@@ -137,7 +88,6 @@ fn exit_app() {
 #[tauri::command]
 fn toggle_app(app: AppHandle) {
     let window = app.get_webview_window("main").unwrap();
-
     // Проверяем, скрыто ли окно
     if window.is_visible().unwrap_or(false) {
         window.hide().unwrap();
