@@ -4,7 +4,19 @@ use std::fs::{File, rename};
 use std::io::{BufReader, BufWriter, Write, copy};
 use std::path::Path;
 
-pub fn prepend_line<P: AsRef<Path>>(path: P, line: &str) -> std::io::Result<()> {
+pub fn prepend_line<P: AsRef<Path>>(path: P, line: Option<&str>) -> std::io::Result<()> {
+    // Если строка пустая то просто выходим.
+    let line = match line {
+        Some(l) => l,
+        None => return Ok(()),
+    };
+
+    // Если строка состоит только из пробелов тоже просто выходим.
+    if line.trim().is_empty() {
+        return Ok(());
+    }
+
+    // Преобразуем переменную `path` типа AsRef<Path> в ссылку вида `&Path`
     let path = path.as_ref();
 
     // 1. Открываем исходный файл для чтения

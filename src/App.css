@@ -1,4 +1,10 @@
 @import "tailwindcss";
+
+.input-error {
+  @apply placeholder:text-red-400 placeholder:text-sm placeholder:text-balance placeholder:font-normal placeholder:scale-y-105;
+}
+
+
 /*
 .logo.vite:hover {
   filter: drop-shadow(0 0 2em #747bff);

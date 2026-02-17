@@ -36,7 +36,7 @@
       },
       "nsis": {
         "languages": [ "English", "Russian"],
-        "displayLanguageSelector": true
+        "displayLanguageSelector": false
       }
     },
     "icon": [

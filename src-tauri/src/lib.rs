@@ -12,13 +12,24 @@ mod add_task_as_create;
 mod add_task_as_modify;
 
 // Имя файла в домашнем каталоге, в который и будем записывать наши заметки.
-const TASK_FILE_NAME: &str = "tfocus_tasks.txt";
+const TASK_FILE_NAME: &'static str = "tfocus_tasks.txt";
 
 #[tauri::command]
-fn show_app(app: AppHandle) {
-    let window = app.get_webview_window("main").unwrap();
-    window.show().unwrap();
-    window.set_focus().unwrap();
+fn show_app(app: AppHandle) -> Result<(), tauri::Error> {
+    // Попытаем получить окно.
+    let window = app
+        .get_webview_window("main")
+        .ok_or(tauri::Error::WindowNotFound)?;
+    // Покажем само окно, даже если оно минимизировано или скрыто.
+    window.unminimize()?;
+    // Устанавливаем окно всегда на верхней панели
+    window.set_always_on_top(true)?;
+    // Показываем окно
+    window.show()?;
+    // Переводим фокус на окно
+    window.set_focus()?;
+    // Если все хорошо, то вернем `OK`
+    Ok(())
 }
 
 #[tauri::command]
@@ -43,40 +54,42 @@ fn add_task(text: String) -> Result<(), String> {
     #[cfg(dev)]
     println!("Строка не пустая - добаляем в задачу");
 
-    let formatted_text = format!(
-        "{} | {}",
-        chrono::Local::now().format("%d-%m-%Y %H:%M"),
-        new_text.to_string()
-    );
+    // Форматируем строку для вывода в файл
+    //let formatted_text = format!(
+    //    "{} | + {}",
+    //    chrono::Local::now().format("%d-%m-%Y %H:%M"),
+    //    new_text
+    //);
+    let timestamp = chrono::Local::now().format("%d-%m-%Y %H:%M").to_string();
+    let formatted_text = format!("{} | {}", timestamp, new_text);
 
     // Получаем данные о домашней директории
     let home_dir = match home_dir() {
         Some(path) => path,
-        None => return Err("Ошибка доступа к домашней директории".to_string()),
+        None => return Err("доступа к домашней директории".to_string()),
     };
 
-    // Добавляем к пути само имя файла
-    let mut file_path = home_dir;
-    file_path.push(TASK_FILE_NAME);
+    // Определим переменную где и будем хранить наши задачи.
+    let file_path = home_dir.join(TASK_FILE_NAME);
 
-    // Проверяем, существует ли файл
+    // Проверим, а есть-ли у нас этот файл
     if file_path.exists() {
         #[cfg(dev)]
         println!("Файл существует - модифицируем");
 
-        if let Err(e) = add_task_as_modify::prepend_line(file_path, &formatted_text) {
+        if let Err(e) = add_task_as_modify::prepend_line(file_path, Some(&formatted_text)) {
             #[cfg(dev)]
             println!("Ошибка файла: {}", e);
-            return Err(format!("Ошибка операции с файлом: {}", e));
+            return Err(format!("операции с файлом: {}", e));
         }
     } else {
         #[cfg(dev)]
         println!("Файл не существует - создаем ");
 
-        if let Err(e) = add_task_as_create::created_line(file_path, &formatted_text) {
+        if let Err(e) = add_task_as_create::created_line(file_path, Some(&formatted_text)) {
             #[cfg(dev)]
             println!("Ошибка при создании файла: {}", e);
-            return Err(format!("Ошибка при создании/записи файла: {}", e));
+            return Err(format!("при создании/записи файла: {}", e));
         }
     }
 
@@ -150,11 +163,17 @@ pub fn run() {
                     .on_menu_event(|app, event| match event.id.as_ref() {
                         "show_input" => {
                             // Вызываем переключение видимости приложения
-                            let _ = show_app(app.app_handle().clone());
+                            if let Err(_e) = show_app(app.app_handle().clone()) {
+                                #[cfg(dev)]
+                                println!("Ошибка при попытке показать окно: {}", _e);
+                            }
                         }
                         "quit" => {
                             #[cfg(dev)]
                             println!("quit menu item was clicked");
+                            // Очищаем все ресурсы
+                            app.cleanup_before_exit();
+                            // И закрываем программу.
                             app.exit(0);
                         }
                         _ => {
