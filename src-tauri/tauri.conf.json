@@ -20,7 +20,8 @@
         "decorations": false,
         "width": 600,
         "height": 60,
-        "visible": false
+        "visible": false,
+        "alwaysOnTop": true
       }
     ],
     "security": {

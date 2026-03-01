@@ -2,118 +2,102 @@
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 
-// импорт зависимостей
 use home::home_dir;
 use tauri::menu::PredefinedMenuItem;
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Manager, WebviewWindow};
 
 // Код работы с файлом
 mod add_task_as_create;
 mod add_task_as_modify;
 
-// Имя файла в домашнем каталоге, в который и будем записывать наши заметки.
-const TASK_FILE_NAME: &'static str = "tfocus_tasks.txt";
+// Имя файла в домашнем каталоге для заметок
+const TASK_FILE_NAME: &str = "tfocus_tasks.txt";
+// Имя основного окна
+const MAIN_WINDOW_LABEL: &str = "main";
 
+/// Вспомогательная функция для получения основного окна
+fn get_main_window(app: &AppHandle) -> Result<WebviewWindow, tauri::Error> {
+    app.get_webview_window(MAIN_WINDOW_LABEL)
+        .ok_or(tauri::Error::WindowNotFound)
+}
+
+/// Показать окно приложения
 #[tauri::command]
 fn show_app(app: AppHandle) -> Result<(), tauri::Error> {
-    // Попытаем получить окно.
-    let window = app
-        .get_webview_window("main")
-        .ok_or(tauri::Error::WindowNotFound)?;
-    // Покажем само окно, даже если оно минимизировано или скрыто.
+    let window = get_main_window(&app)?;
+
     window.unminimize()?;
-    // Устанавливаем окно всегда на верхней панели
-    window.set_always_on_top(true)?;
-    // Показываем окно
     window.show()?;
-    // Переводим фокус на окно
     window.set_focus()?;
-    // Если все хорошо, то вернем `OK`
+
     Ok(())
 }
 
+/// Скрыть окно приложения
 #[tauri::command]
-fn hide_app(app: AppHandle) {
-    // println!("Вызвано `hide_app`");
-    let window = app.get_webview_window("main").unwrap();
-    window.hide().unwrap();
+fn hide_app(app: AppHandle) -> Result<(), tauri::Error> {
+    let window = get_main_window(&app)?;
+    window.hide()?;
+    Ok(())
 }
 
+/// Добавить задачу в файл
 #[tauri::command]
 fn add_task(text: String) -> Result<(), String> {
-    #[cfg(dev)]
+    #[cfg(debug_assertions)]
     println!("Вызвано `add_task`");
 
-    // Сразу уберем пробелы в конце строки
     let new_text = text.trim_ascii_end();
-    // Проверяем, пустая ли строка
     if new_text.is_empty() {
-        return Ok(()); // Возвращаем успешный результат, ничего не делая
+        return Ok(());
     }
 
-    #[cfg(dev)]
-    println!("Строка не пустая - добаляем в задачу");
+    #[cfg(debug_assertions)]
+    println!("Строка не пустая - добавляем в задачу");
 
-    // Форматируем строку для вывода в файл
-    //let formatted_text = format!(
-    //    "{} | + {}",
-    //    chrono::Local::now().format("%d-%m-%Y %H:%M"),
-    //    new_text
-    //);
     let timestamp = chrono::Local::now().format("%d-%m-%Y %H:%M").to_string();
     let formatted_text = format!("{} | {}", timestamp, new_text);
 
-    // Получаем данные о домашней директории
-    let home_dir = match home_dir() {
-        Some(path) => path,
-        None => return Err("доступа к домашней директории".to_string()),
-    };
-
-    // Определим переменную где и будем хранить наши задачи.
+    let home_dir = home_dir().ok_or("доступа к домашней директории")?;
     let file_path = home_dir.join(TASK_FILE_NAME);
 
-    // Проверим, а есть-ли у нас этот файл
     if file_path.exists() {
-        #[cfg(dev)]
+        #[cfg(debug_assertions)]
         println!("Файл существует - модифицируем");
 
-        if let Err(e) = add_task_as_modify::prepend_line(file_path, Some(&formatted_text)) {
-            #[cfg(dev)]
-            println!("Ошибка файла: {}", e);
-            return Err(format!("операции с файлом: {}", e));
-        }
+        add_task_as_modify::prepend_line(file_path, Some(&formatted_text))
+            .map_err(|e| format!("операции с файлом: {}", e))?;
     } else {
-        #[cfg(dev)]
-        println!("Файл не существует - создаем ");
+        #[cfg(debug_assertions)]
+        println!("Файл не существует - создаём");
 
-        if let Err(e) = add_task_as_create::created_line(file_path, Some(&formatted_text)) {
-            #[cfg(dev)]
-            println!("Ошибка при создании файла: {}", e);
-            return Err(format!("при создании/записи файла: {}", e));
-        }
+        add_task_as_create::create_with_line(file_path, Some(&formatted_text))
+            .map_err(|e| format!("при создании/записи файла: {}", e))?;
     }
 
     Ok(())
 }
 
-// Команда для выхода из приложения.
+/// Выйти из приложения
 #[tauri::command]
-fn exit_app() {
-    std::process::exit(0);
+fn exit_app(app: AppHandle) {
+    app.exit(0);
 }
 
+/// Переключить видимость окна
 #[tauri::command]
-fn toggle_app(app: AppHandle) {
-    let window = app.get_webview_window("main").unwrap();
-    // Проверяем, скрыто ли окно
+fn toggle_app(app: AppHandle) -> Result<(), tauri::Error> {
+    let window = get_main_window(&app)?;
+
     if window.is_visible().unwrap_or(false) {
-        window.hide().unwrap();
+        window.hide()?;
     } else {
-        // Вернём окно
-        window.unminimize().unwrap();
-        window.show().unwrap();
-        window.set_focus().unwrap();
+        window.unminimize()?;
+        window.show()?;
+        window.set_focus()?;
     }
+
+    Ok(())
 }
 
 pub fn run() {
@@ -134,13 +118,11 @@ pub fn run() {
 
                 app.handle().plugin(
                     tauri_plugin_global_shortcut::Builder::new()
-                        .with_handler(move |_app, shortcut, event| {
-                            //println!("{:?}", shortcut);
-                            //let _ = toggle_app(_app.clone());
+                        .with_handler(move |app, shortcut, event| {
                             if shortcut == &ctrl_shift_q_shortcut {
                                 match event.state() {
                                     ShortcutState::Pressed => {
-                                        let _ = show_app(_app.clone());
+                                        let _ = show_app(app.clone());
                                     }
                                     ShortcutState::Released => {}
                                 }
@@ -149,41 +131,35 @@ pub fn run() {
                         .build(),
                 )?;
 
-                // Menu items
                 let toggle_i =
                     MenuItem::with_id(app, "show_input", "Показать окно", true, None::<&str>)?;
                 let separator_i = PredefinedMenuItem::separator(app)?;
-                let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-                let _menu = Menu::with_items(app, &[&toggle_i, &separator_i, &quit_i])?;
+                let quit_i = MenuItem::with_id(app, "quit", "Выход", true, None::<&str>)?;
+                let menu = Menu::with_items(app, &[&toggle_i, &separator_i, &quit_i])?;
 
                 let _ = TrayIconBuilder::new()
                     .icon(app.default_window_icon().unwrap().clone())
-                    .menu(&_menu)
+                    .menu(&menu)
                     .show_menu_on_left_click(true)
                     .on_menu_event(|app, event| match event.id.as_ref() {
                         "show_input" => {
-                            // Вызываем переключение видимости приложения
                             if let Err(_e) = show_app(app.app_handle().clone()) {
-                                #[cfg(dev)]
-                                println!("Ошибка при попытке показать окно: {}", _e);
+                                #[cfg(debug_assertions)]
+                                eprintln!("Ошибка при показе окна: {}", _e);
                             }
                         }
                         "quit" => {
-                            #[cfg(dev)]
+                            #[cfg(debug_assertions)]
                             println!("quit menu item was clicked");
-                            // Очищаем все ресурсы
-                            app.cleanup_before_exit();
-                            // И закрываем программу.
                             app.exit(0);
                         }
                         _ => {
-                            #[cfg(dev)]
-                            println!("menu item {:?} not handled", event.id);
+                            #[cfg(debug_assertions)]
+                            eprintln!("menu item {:?} not handled", event.id);
                         }
                     })
                     .build(app)?;
 
-                // Регистрируем горячую клавишу для переключения
                 app.global_shortcut().register(ctrl_shift_q_shortcut)?;
             }
             Ok(())
